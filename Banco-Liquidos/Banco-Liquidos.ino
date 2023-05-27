@@ -16,8 +16,6 @@
 #define SCL_2 4
 #define SDA_2 5
 
-//arduino::MbedI2C Wire1(SDA_1, SCL_1);
-
 //Configuración de los pines de los HX711
 #define DOUT_1 7
 #define SCK_1 8
@@ -56,10 +54,10 @@ void setup() {
   // Configurar MLX90614
 
   Wire.begin();
-  mlx1.begin();  // Inicializar el primer sensor MLX90614
+  mlx1.begin(0x5A,&Wire);  // Inicializar el primer sensor MLX90614 -> (default addr, pointer to wire)
 
   Wire1.begin();
-  mlx2.begin();  // Inicializar el segundo sensor MLX90614
+  mlx2.begin(0x5A,&Wire1);  // Inicializar el segundo sensor MLX90614 -> (default addr, pointer to wire)
   
 }
 
