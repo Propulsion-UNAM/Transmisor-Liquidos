@@ -11,6 +11,7 @@
 #define ADC_LM35 28
 
 //Configuración de los pines de temperatura IC2
+//CONFIGURADOS EN pins_arduino.h
 #define SCL_1 2
 #define SDA_1 3
 #define SCL_2 4
@@ -39,17 +40,19 @@ Adafruit_MLX90614 mlx2;
 
 void setup() {
   Serial.begin(9600);
+
+  //TODO: Poner los pinModes
   
   // Inicializar los módulos HX711
   for (int i = 0; i < NUM_GALGAS; i++) {
     scales[i].begin(DOUT_PINS[i], SCK_PINS[i]);
 
-    //CALIBRACIÓN
+    //TODO: CALIBRACIÓN
+    
     //scales[i].set_scale(1000);  // Factor de escala para cada galga
     //scales[i].tare();
+    
   }
-  
-  // Inicializar el ADC
 
   // Configurar MLX90614
 
@@ -71,20 +74,22 @@ void loop() {
   for (int i = 0; i < NUM_GALGAS; i++) {
     if (scales[i].is_ready()) {
       connectedScales++;
-      float weight = scales[i].get_units();
-      
+      weights[i] = scales[i].get_units();
+    } else {
+      weights[i] = 0.0;
     }
   }
 
-  // Leer los datos de los sensores de presión
+  // Leer los datos de los sensores de presión ADC
   float pressure1 = read_pressure_ADC(ADC_Presion_1);
   float pressure2 = read_pressure_ADC(ADC_Presion_2);
 
   // Leer los datos del sensor de temperatura ADC
-  float temp = read_temperature_ADC(ADC_LM35);
+  float temp1 = read_temperature_ADC(ADC_LM35);
 
-  Serial.print("Galga(s) detectada(s): ");
-  Serial.println(connectedScales);
+  // Leer los datos de los LMX90614
+  float temp2 = mlx1.readObjextTempC();
+  float temp3 = mlx2.readObjextTempC();
 
   delay(1000); // Esperar 1 segundo antes de la siguiente lectura
 }
