@@ -88,8 +88,8 @@ void loop() {
   float temp1 = read_temperature_ADC(ADC_LM35);
 
   // Leer los datos de los LMX90614
-  float temp2 = mlx1.readObjextTempC();
-  float temp3 = mlx2.readObjextTempC();
+  float temp2 = mlx1.readObjectTempC();
+  float temp3 = mlx2.readObjectTempC();
 
   delay(1000); // Esperar 1 segundo antes de la siguiente lectura
 }
