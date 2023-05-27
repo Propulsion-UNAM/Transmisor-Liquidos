@@ -145,6 +145,8 @@ void loop() {
   // Guardamos los datos en una sd
   dataFile = SD.open("/data.txt", FILE_WRITE);
   if (dataFile) {
+    datos.print(micros()/1000);
+    datos.print(",");
     datos.print(trama[0]);
     datos.print(",");
     datos.print(trama[1]);
