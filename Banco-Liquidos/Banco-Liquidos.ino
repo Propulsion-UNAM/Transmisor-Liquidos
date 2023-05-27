@@ -36,7 +36,7 @@
 #define RTS     21
 #define DIO0    20
 #define CS_LORA 17
-
+#define CS_SD   29
 // Definir los pines de conexión de los HX711
 const int DOUT_PINS[] = {DOUT_1, DOUT_2, DOUT_3};  // Pines de datos de las galgas
 const int SCK_PINS[] = {SCK_1, SCK_2, SCK_3};   // Pines de reloj de las galgas
@@ -158,7 +158,7 @@ void loop() {
     datos.print(",");
     datos.print(trama[6]);
     datos.print(",");
-    datos.print(trama[7]);
+    datos.println(trama[7]);
     datos.flush();
   }
   datos.close();
