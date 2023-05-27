@@ -11,10 +11,12 @@
 #define ADC_LM35 28
 
 //Configuración de los pines de temperatura IC2
-#define SCL_1 5
-#define SDA_1 4
-#define SCL_2 7
-#define SDA_2 6
+#define SCL_1 2
+#define SDA_1 3
+#define SCL_2 4
+#define SDA_2 5
+
+//arduino::MbedI2C Wire1(SDA_1, SCL_1);
 
 //Configuración de los pines de los HX711
 #define DOUT_1 7
@@ -54,13 +56,9 @@ void setup() {
   // Configurar MLX90614
 
   Wire.begin();
-  Wire.setSDA(SDA_1);  // Pin SDA para el primer bus
-  Wire.setSCL(SCL_1);  // Pin SCL para el primer bus
   mlx1.begin();  // Inicializar el primer sensor MLX90614
 
   Wire1.begin();
-  Wire1.setSDA(SDA_2);  // Pin SDA para el segundo bus
-  Wire1.setSCL(SCL_2);  // Pin SCL para el segundo bus
   mlx2.begin();  // Inicializar el segundo sensor MLX90614
   
 }
