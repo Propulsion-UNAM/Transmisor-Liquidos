@@ -51,11 +51,17 @@ void setup() {
   
   // Inicializar el ADC
 
-  Wire.begin(SDA_PIN_1, SCL_PIN_1);  // Inicializar el primer bus I2C
-  mlx1.begin();  // Inicializar el primer sensor
-  
-  Wire.begin(SDA_PIN_2, SCL_PIN_2);  // Inicializar el segundo bus I2C
-  mlx2.begin();  // Inicializar el segundo sensor
+  // Configurar MLX90614
+
+  Wire.begin();
+  Wire.setSDA(SDA_1);  // Pin SDA para el primer bus
+  Wire.setSCL(SCL_1);  // Pin SCL para el primer bus
+  mlx1.begin();  // Inicializar el primer sensor MLX90614
+
+  Wire1.begin();
+  Wire1.setSDA(SDA_2);  // Pin SDA para el segundo bus
+  Wire1.setSCL(SCL_2);  // Pin SCL para el segundo bus
+  mlx2.begin();  // Inicializar el segundo sensor MLX90614
   
 }
 
