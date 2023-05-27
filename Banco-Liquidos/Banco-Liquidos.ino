@@ -2,6 +2,8 @@
 #include <Wire.h>
 #include <HX711.h>
 #include <SD.h>
+#include <LoRa.h>
+#include <Streaming.h>
 
 // Configuración de los pines de presión
 #define ADC_Presion_1 27
@@ -27,6 +29,14 @@
 
 #define NUM_GALGAS 3
 
+//Configuración de los pines de LoRa
+#define MISO    16
+#define MOSI    19
+#define SCK     24
+#define RTS     21
+#define DIO0    20
+#define CS_LORA 17
+
 // Definir los pines de conexión de los HX711
 const int DOUT_PINS[] = {DOUT_1, DOUT_2, DOUT_3};  // Pines de datos de las galgas
 const int SCK_PINS[] = {SCK_1, SCK_2, SCK_3};   // Pines de reloj de las galgas
@@ -38,13 +48,19 @@ HX711 scales[NUM_GALGAS];
 Adafruit_MLX90614 mlx1;
 Adafruit_MLX90614 mlx2;
 
+// Variables
+float trama[8];
+
 void setup() {
   Serial.begin(9600);
 
   //TODO: Poner los pinModes
+
+  //TODO: Controles para ver si se detectan los sensores
   
   // Inicializar los módulos HX711
   for (int i = 0; i < NUM_GALGAS; i++) {
+    scales[i] = HX711();
     scales[i].begin(DOUT_PINS[i], SCK_PINS[i]);
 
     //TODO: CALIBRACIÓN
@@ -61,6 +77,14 @@ void setup() {
 
   Wire1.begin();
   mlx2.begin(0x5A,&Wire1);  // Inicializar el segundo sensor MLX90614 -> (default addr, pointer to wire)
+
+  // Configurar LoRa
+
+  LoRa.setPins(CS_LORA, RTS, DIO0);
+  if (!LoRa.begin(433E6)) { //AJUSTAR FRECUENCIA
+    Serial.println("Error al iniciar LoRa");
+    while (1);
+  }
   
 }
 
@@ -91,7 +115,36 @@ void loop() {
   float temp2 = mlx1.readObjectTempC();
   float temp3 = mlx2.readObjectTempC();
 
+  trama[0] = weights[0];
+  trama[1] = weights[1];
+  trama[2] = weights[2];
+  trama[3] = pressure1;
+  trama[4] = pressure2;
+  trama[5] = temp1;
+  trama[6] = temp2;
+  trama[7] = temp3;
+
+  lora_send(trama);
+
   delay(1000); // Esperar 1 segundo antes de la siguiente lectura
+}
+
+void lora_send(float data[]) {
+  LoRa.beginPacket();
+  LoRa.print("<");
+  for (int i = 0; i < sizeof(data); i++) {
+    if (data[i] != NULL) {
+      if (i == sizeof(data) -1) {
+        LoRa.print(data[i]);
+      }
+      LoRa.print(data[i]);
+      LoRa.print(",");
+    } else {
+      LoRa.print(0.0);
+    }
+  }
+  LoRa.print(">");
+  LoRa.endPacket();
 }
 
 float read_pressure_ADC(byte pin) {
