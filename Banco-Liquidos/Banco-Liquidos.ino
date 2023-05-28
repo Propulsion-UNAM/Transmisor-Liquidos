@@ -1,9 +1,9 @@
 #include <Adafruit_MLX90614.h>
 #include <Wire.h>
-#include <HX711.h>
 #include <SD.h>
 #include <LoRa.h>
 #include <Streaming.h>
+#include <Q2HX711.h>
 
 // Configuración de los pines de presión
 #define ADC_Presion_1 27
@@ -38,44 +38,53 @@
 #define CS_LORA 17
 #define CS_SD   29
 
-// Definir los pines de conexión de los HX711
-const int DOUT_PINS[] = {DOUT_1, DOUT_2, DOUT_3};  // Pines de datos de las galgas
-const int SCK_PINS[] = {SCK_1, SCK_2, SCK_3};   // Pines de reloj de las galgas
+// Lecturas Galgas
+Q2HX711 celda1(DOUT_1,SCK_1); // Galga 1
+long lectura_ADC1;
+float lectura_kgf1;
+float letura_N1;
+float a1;
+float b1;
 
-// Crear un arreglo de objetos HX711 para las galgas
-HX711 scales[NUM_GALGAS];
+Q2HX711 celda2(DOUT_2,SCK_2); // Galga 2
+long lectura_ADC2;
+float lectura_kgf2;
+float letura_N2;
+float a2;
+float b2;
+
+Q2HX711 celda3(DOUT_1,SCK_1); // Galga 3
+long lectura_ADC3;
+float lectura_kgf3;
+float letura_N3;
+float a3;
+float b3;
 
 // Objetos MLX90614
 Adafruit_MLX90614 mlx1;
 Adafruit_MLX90614 mlx2;
 
 // Variables
-float trama[8];
+float trama[9];
 
 // Archivo sd
-File dataFile;
+File datos;
 
 void setup() {
   Serial.begin(9600);
 
-  //TODO: Poner los pinModes
+  // Calibracion de las galgas
+  //40 kg
+  a1 = 1.42185e-05;
+  b1 = -121.061;
+  //Aquí pongan la calibracion de la de 1000
+  a2 = 0.000229151;
+  b2 = -1925.19;
 
-  //TODO: Controles para ver si se detectan los sensores
-  
-  // Inicializar los módulos HX711
-  for (int i = 0; i < NUM_GALGAS; i++) {
-    scales[i] = HX711();
-    scales[i].begin(DOUT_PINS[i], SCK_PINS[i]);
+  a3 = 0.000229151;
+  b3 = -1925.19;
 
-    //TODO: CALIBRACIÓN
-    
-    //scales[i].set_scale(1000);  // Factor de escala para cada galga
-    //scales[i].tare();
-    
-  }
-
-  // Configurar MLX90614
-
+  // Configurar Sensores de temperatura infrarojos MLX90614
   Wire.begin();
   mlx1.begin(0x5A,&Wire);  // Inicializar el primer sensor MLX90614 -> (default addr, pointer to wire)
 
@@ -96,33 +105,25 @@ void setup() {
     return;
   }
   // Creamos el encabezado
-  dataFile = SD.open("/data.txt", FILE_WRITE);
-  if (dataFile) {
+  datos = SD.open("/datos.txt", FILE_WRITE);
+  if (datos)
     datos.println("tiempo,peso1,peso2,peso3,presion1,presion2,temp1,temp2,temp3");
-    datos.close();
-  }
-  
+  datos.close();
+
 }
 
 void loop() {
+  // Lectura galga 1
+  lectura_ADC1 = celda1.read();
+  lectura_kgf1 = a1 * lectura_ADC1 + b1 ;
 
-  // Leer los datos de las galgas conectadas
+  // Lectura galga 2
+  lectura_ADC2 = celda2.read();
+  lectura_kgf2 = a2 * lectura_ADC2 + b2 ;
 
-  float weights[NUM_GALGAS];
-
-  int connectedScales = 0;
-  for (int i = 0; i < NUM_GALGAS; i++) {
-    if (scales[i].is_ready()) {
-      connectedScales++;
-      weights[i] = scales[i].get_units();
-    } else {
-      weights[i] = 0.0;
-    }
-  }
-
-  // Leer los datos de los sensores de presión ADC
-  float pressure1 = read_pressure_ADC(ADC_Presion_1);
-  float pressure2 = read_pressure_ADC(ADC_Presion_2);
+  // Lectura galga 3
+  lectura_ADC3 = celda3.read();
+  lectura_kgf3 = a3 * lectura_ADC3 + b3 ;
 
   // Leer los datos del sensor de temperatura ADC
   float temp1 = read_temperature_ADC(ADC_LM35);
@@ -131,22 +132,27 @@ void loop() {
   float temp2 = mlx1.readObjectTempC();
   float temp3 = mlx2.readObjectTempC();
 
-  trama[0] = weights[0];
-  trama[1] = weights[1];
-  trama[2] = weights[2];
-  trama[3] = pressure1;
-  trama[4] = pressure2;
-  trama[5] = temp1;
-  trama[6] = temp2;
-  trama[7] = temp3;
+  // Leer los datos de los sensores de presión ADC
+  float pressure1 = read_pressure_ADC(ADC_Presion_1);
+  float pressure2 = read_pressure_ADC(ADC_Presion_2);
 
+  // Guardamos los datos en la trama
+  trama[0] = micros()/1000;
+  trama[1] = lectura_kgf1;
+  trama[2] = lectura_kgf2;
+  trama[3] = lectura_kgf3;
+  trama[4] = pressure1;
+  trama[5] = pressure2;
+  trama[6] = temp1;
+  trama[7] = temp2;
+  trama[8] = temp3;
+
+  // Enviamos por telemetria Lora la Trama
   lora_send(trama);
-  
+
   // Guardamos los datos en una sd
-  dataFile = SD.open("/data.txt", FILE_WRITE);
-  if (dataFile) {
-    datos.print(micros()/1000);
-    datos.print(",");
+  datos = SD.open("/data.txt", FILE_WRITE);
+  if (datos) {
     datos.print(trama[0]);
     datos.print(",");
     datos.print(trama[1]);
@@ -161,14 +167,15 @@ void loop() {
     datos.print(",");
     datos.print(trama[6]);
     datos.print(",");
-    datos.println(trama[7]);
+    datos.print(trama[7]);
+    datos.print(",");
+    datos.println(trama[8]);
     datos.flush();
   }
   datos.close();
-
-  delay(1000); // Esperar 1 segundo antes de la siguiente lectura
 }
 
+// Funcion para dar formato y enviar por medio del LoRa
 void lora_send(float data[]) {
   LoRa.beginPacket();
   LoRa.print("<");
@@ -188,19 +195,16 @@ void lora_send(float data[]) {
 
 }
 
+// Funcion para leer la presion en las entradas analogicas
 float read_pressure_ADC(byte pin) {
   float voltage = analogRead(pin) * (5.0 / 4096.0);
   float value = map(voltage, 0.5, 4.5, 0, 1600);
   return value;
 }
 
+// Funcion para leer las lecturas de las entradas de temperatura
 float read_temperature_ADC(byte pin) {
   float voltage = analogRead(pin) * (3.3 / 4096.0);
   float temperature = (voltage) * 100;
   return temperature;
-}
-
-long mapFloat(long x, long in_min, long in_max, long out_min, long out_max)
-{
-  return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
 }
